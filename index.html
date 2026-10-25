@@ -1,0 +1,2138 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#090d16" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="description" content="Offline-first 5x5 progressive overload barbell strength workout tracker." />
+  <title>5x5 Iron Simple Tracker</title>
+
+  <!-- PWA Web App Manifest & Icons -->
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23090d16'/%3E%3Cpath d='M112 176h48v160h-48zm240 0h48v160h-48zM64 208h32v96H64zm352 0h32v96h-32zM160 240h192v32H160z' fill='%2310b981'/%3E%3C/svg%3E" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23090d16'/%3E%3Cpath d='M112 176h48v160h-48zm240 0h48v160h-48zM64 208h32v96H64zm352 0h32v96h-32zM160 240h192v32H160z' fill='%2310b981'/%3E%3C/svg%3E" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono for crisp numbers -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    /* Custom touch & gym-friendly utilities */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    input, textarea {
+      user-select: text;
+    }
+    body {
+      background-color: #090d16;
+      color: #f8fafc;
+      overscroll-behavior-y: none;
+    }
+    .set-circle {
+      transition: transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .set-circle:active {
+      transform: scale(0.88);
+    }
+    /* Custom subtle scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+    @keyframes pulse-ring {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45); }
+      70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+    .up-next-glow {
+      animation: pulse-ring 2.2s infinite;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans antialiased selection:bg-emerald-500 selection:text-slate-950 pb-36">
+
+  <!-- TOP HEADER -->
+  <header class="sticky top-0 z-30 backdrop-blur-xl bg-slate-950/85 border-b border-slate-800/80">
+    <div class="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 font-mono font-extrabold text-slate-950 text-base tracking-tighter">
+          5&times;5
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-extrabold text-base sm:text-lg tracking-tight text-white">IRON 5&times;5</h1>
+            <span id="headerStreakBadge" class="text-[11px] font-mono font-semibold uppercase px-2 py-0.5 rounded-full bg-slate-800 text-emerald-400 border border-slate-700">
+              0 Sessions
+            </span>
+          </div>
+          <p class="text-xs text-slate-400">Linear Progression Strength Tracker</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <!-- Native Pixel WebAPK Install Button (shown automatically when installable) -->
+        <button
+          id="pwaInstallBtn"
+          onclick="triggerPwaInstall()"
+          class="hidden px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition items-center gap-1.5"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Install App
+        </button>
+
+        <!-- Main Navigation Pills -->
+        <nav class="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800">
+          <button id="navWorkoutBtn" onclick="switchTab('workout')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-emerald-500 text-slate-950 shadow-sm">
+            Workout
+          </button>
+          <button id="navHistoryBtn" onclick="switchTab('history')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white">
+            History &amp; Charts
+          </button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="flex-1 max-w-2xl w-full mx-auto px-4 pt-4 space-y-5">
+
+    <!-- ==================== TAB 1: WORKOUT LOGGER ==================== -->
+    <section id="tabWorkout" class="space-y-5">
+
+      <!-- WORKOUT A / WORKOUT B SELECTOR CARD -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Select Training Day</span>
+            <p id="lastWorkoutSubtext" class="text-xs text-slate-300 mt-0.5">Starting fresh — Workout A is recommended first.</p>
+          </div>
+          <button onclick="openRulesModal()" class="text-xs text-slate-400 hover:text-emerald-400 flex items-center gap-1 bg-slate-800/70 px-2.5 py-1.5 rounded-lg border border-slate-700/60 transition">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            5&times;5 Rules
+          </button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <!-- Workout A Button -->
+          <button id="selectWorkoutABtn" onclick="selectWorkoutType('A')" class="relative text-left p-3.5 rounded-xl border-2 transition-all flex flex-col justify-between">
+            <div class="flex items-center justify-between w-full mb-1.5">
+              <span class="font-extrabold text-base tracking-tight">WORKOUT A</span>
+              <span id="badgeUpNextA" class="hidden text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 up-next-glow">
+                UP NEXT
+              </span>
+            </div>
+            <p class="text-xs text-slate-400 leading-relaxed">Squat 5&times;5 &bull; Bench 5&times;5 &bull; Row 5&times;5</p>
+          </button>
+
+          <!-- Workout B Button -->
+          <button id="selectWorkoutBBtn" onclick="selectWorkoutType('B')" class="relative text-left p-3.5 rounded-xl border-2 transition-all flex flex-col justify-between">
+            <div class="flex items-center justify-between w-full mb-1.5">
+              <span class="font-extrabold text-base tracking-tight">WORKOUT B</span>
+              <span id="badgeUpNextB" class="hidden text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 up-next-glow">
+                UP NEXT
+              </span>
+            </div>
+            <p class="text-xs text-slate-400 leading-relaxed">Squat 5&times;5 &bull; OHP 5&times;5 &bull; Deadlift 1&times;5</p>
+          </button>
+        </div>
+
+        <!-- Quick Hint Bar -->
+        <div class="mt-3 pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
+          <div class="flex items-center gap-2">
+            <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            <span>1 tap = <strong>5 reps</strong></span>
+            <span class="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 ml-1"></span>
+            <span>More taps = <strong>4..0 (Fail)</strong></span>
+          </div>
+          <button onclick="resetCurrentSessionSets()" class="text-slate-400 hover:text-rose-400 underline underline-offset-2 font-medium">
+            Clear sets
+          </button>
+        </div>
+      </div>
+
+      <!-- DYNAMIC EXERCISE CARDS CONTAINER -->
+      <div id="exerciseCardsContainer" class="space-y-4"></div>
+
+      <!-- WORKOUT NOTES & FINISH CTA -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-4 shadow-xl">
+        <div>
+          <label for="sessionNotesInput" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+            Session Notes (Optional)
+          </label>
+          <input
+            id="sessionNotesInput"
+            type="text"
+            oninput="saveSessionNotes(this.value)"
+            placeholder="e.g., Squats felt explosive, belt on set 4, slept 8h..."
+            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+          />
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button
+            onclick="handleFinishWorkoutClick()"
+            class="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-base tracking-tight shadow-lg shadow-emerald-500/20 active:scale-[0.99] transition flex items-center justify-center gap-2"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            Finish &amp; Save Workout
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: HISTORY & ANALYTICS ==================== -->
+    <section id="tabHistory" class="hidden space-y-5">
+
+      <!-- CURRENT WORKING WEIGHTS OVERVIEW -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300">Current Working Weights</h2>
+            <p class="text-xs text-slate-400">Auto-progresses after every completed 5&times;5 / 1&times;5 session</p>
+          </div>
+          <span class="text-[11px] font-mono text-slate-400 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">Bar: 20kg</span>
+        </div>
+        <div id="workingWeightsOverviewGrid" class="grid grid-cols-2 sm:grid-cols-5 gap-2.5"></div>
+      </div>
+
+      <!-- WORKING WEIGHT PROGRESSION CHART -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300">Strength Progression Chart</h2>
+            <p class="text-xs text-slate-400">Working weight (kg) over logged sessions</p>
+          </div>
+          <!-- Exercise Filter Pills for Chart -->
+          <div id="chartFilterContainer" class="flex flex-wrap gap-1.5"></div>
+        </div>
+
+        <!-- SVG Chart Wrapper -->
+        <div class="bg-slate-950 border border-slate-800/90 rounded-xl p-3 relative">
+          <div id="chartContainer" class="w-full h-60 flex items-center justify-center"></div>
+        </div>
+      </div>
+
+      <!-- DATA MANAGEMENT & GITHUB PWA TOOLS -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300">Data, CSV &amp; Pixel PWA Files</h2>
+            <p class="text-xs text-slate-400">Export logs, share to Pixel apps, or download companion PWA files for GitHub</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+          <button onclick="exportToCSV()" class="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-semibold transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Export CSV
+          </button>
+          <button onclick="openImportExportModal()" class="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+            JSON Backup
+          </button>
+          <button onclick="openPwaFilesModal()" class="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 border border-teal-500/30 text-xs font-semibold transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+            PWA Repo Files
+          </button>
+          <button onclick="loadDemoDataPrompt()" class="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/30 text-xs font-semibold transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            Demo Data
+          </button>
+          <button onclick="openResetConfirmModal()" class="col-span-2 sm:col-span-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs font-semibold transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            Reset
+          </button>
+        </div>
+      </div>
+
+      <!-- PAST WORKOUT LOGS LIST -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300">Workout Log History</h2>
+          <span id="historyCountLabel" class="text-xs font-mono text-slate-400">0 sessions</span>
+        </div>
+        <div id="historyListContainer" class="space-y-3"></div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- ==================== FLOATING REST TIMER BAR ==================== -->
+  <div id="restTimerBar" class="fixed bottom-0 inset-x-0 z-40 transform translate-y-full transition-transform duration-300 ease-out pointer-events-none">
+    <div class="max-w-2xl mx-auto px-3 pb-3 pt-1 pointer-events-auto">
+      <div class="bg-slate-900/95 backdrop-blur-xl border border-slate-700/90 rounded-2xl shadow-2xl shadow-black/80 overflow-hidden">
+        <!-- Thin Progress Bar -->
+        <div class="w-full h-1.5 bg-slate-800">
+          <div id="restTimerProgress" class="h-full bg-emerald-500 transition-all duration-300" style="width: 100%"></div>
+        </div>
+
+        <div class="p-3 sm:px-4 flex flex-col gap-2.5">
+          <!-- Top Row: Countdown + Reason + Mode Presets -->
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-3">
+              <div id="restTimerClock" class="font-mono font-extrabold text-2xl sm:text-3xl text-white tracking-tight tabular-nums">
+                01:30
+              </div>
+              <div>
+                <div id="restTimerStatusBadge" class="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+                  Set Complete &bull; Standard Rest
+                </div>
+                <div class="text-[11px] text-slate-400">
+                  Tap preset to adjust rest target
+                </div>
+              </div>
+            </div>
+
+            <!-- Sound toggle & Dismiss -->
+            <div class="flex items-center gap-1.5">
+              <button onclick="toggleSoundMute()" id="soundMuteBtn" title="Toggle timer chime" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+                <svg id="soundOnIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+              </button>
+              <button onclick="dismissRestTimer()" title="Dismiss Timer" class="p-2 rounded-xl bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 border border-slate-700 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Bottom Row: Quick Preset Pills & +30s / Reset Controls -->
+          <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
+            <div class="flex items-center gap-1.5">
+              <button onclick="startRestTimer(90, 'Standard Rest (90s)', 'emerald')" id="preset90Btn" class="px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold border transition">
+                1:30 Easy
+              </button>
+              <button onclick="startRestTimer(180, 'Hard Set Rest (3m)', 'amber')" id="preset180Btn" class="px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold border transition">
+                3:00 Hard
+              </button>
+              <button onclick="startRestTimer(300, 'Failed Set Recovery (5m)', 'rose')" id="preset300Btn" class="px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold border transition">
+                5:00 Fail
+              </button>
+            </div>
+
+            <div class="flex items-center gap-1.5">
+              <button onclick="addRestTime(30)" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-mono text-xs font-bold border border-slate-700 transition">
+                +30s
+              </button>
+              <button onclick="resetRestTimer()" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs font-semibold border border-slate-700 transition">
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== CUSTOM MODAL OVERLAY ==================== -->
+  <div id="modalOverlay" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div id="modalContent" class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"></div>
+  </div>
+
+  <!-- ==================== TOAST NOTIFICATION ==================== -->
+  <div id="toastBanner" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 hidden px-4 py-2.5 rounded-xl bg-slate-800/95 border border-emerald-500/40 text-xs font-semibold text-white shadow-xl flex items-center gap-2">
+    <span id="toastText">Saved</span>
+  </div>
+
+  <!-- ==================== APPLICATION LOGIC ==================== -->
+  <script>
+    /*************************************************************************
+     * 0. PWA SERVICE WORKER & ANDROID PIXEL INSTALL HANDLER
+     *************************************************************************/
+    let deferredInstallPrompt = null;
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {
+          // Silently ignore if previewed without sw.js present
+        });
+      });
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      const btn = document.getElementById('pwaInstallBtn');
+      if (btn) {
+        btn.classList.remove('hidden');
+        btn.classList.add('flex');
+      }
+    });
+
+    async function triggerPwaInstall() {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      const { outcome } = await deferredInstallPrompt.userChoice;
+      if (outcome === 'accepted') {
+        const btn = document.getElementById('pwaInstallBtn');
+        if (btn) btn.classList.add('hidden');
+        showToast('Installing 5x5 Tracker on your device...');
+      }
+      deferredInstallPrompt = null;
+    }
+
+    // Companion files content for 5x5-iron-simple-tracker repo
+    const MANIFEST_JSON_CONTENT = JSON.stringify({
+      name: "5x5 Iron Simple Tracker",
+      short_name: "5x5 Iron",
+      description: "Offline-first 5x5 progressive overload barbell strength workout tracker.",
+      start_url: "./",
+      scope: "./",
+      display: "standalone",
+      orientation: "portrait",
+      background_color: "#090d16",
+      theme_color: "#090d16",
+      icons: [
+        {
+          src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23090d16'/%3E%3Cpath d='M112 176h48v160h-48zm240 0h48v160h-48zM64 208h32v96H64zm352 0h32v96h-32zM160 240h192v32H160z' fill='%2310b981'/%3E%3C/svg%3E",
+          sizes: "192x192 512x512",
+          type: "image/svg+xml",
+          purpose: "any maskable"
+        }
+      ]
+    }, null, 2);
+
+    const SW_JS_CONTENT = `const CACHE_NAME = '5x5-iron-simple-tracker-v1';
+const ASSETS = [
+  './',
+  './index.html',
+  './manifest.json',
+  'https://cdn.tailwindcss.com',
+  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap'
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys.map((key) => {
+          if (key !== CACHE_NAME) return caches.delete(key);
+        })
+      )
+    )
+  );
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      return (
+        cachedResponse ||
+        fetch(event.request).then((networkResponse) => {
+          return caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, networkResponse.clone());
+            return networkResponse;
+          });
+        })
+      );
+    })
+  );
+});
+`;
+
+    /*************************************************************************
+     * 1. CONSTANTS & 5x5 PROGRAM DEFINITIONS
+     *************************************************************************/
+    const STORAGE_KEY = 'iron_5x5_tracker_v1';
+    const BARBELL_WEIGHT = 20; // Standard 20kg Olympic Barbell
+
+    const EXERCISES = {
+      squat: {
+        id: 'squat',
+        name: 'Barbell Squat',
+        shortName: 'Squat',
+        sets: 5,
+        reps: 5,
+        increment: 2.5,
+        defaultWeight: 60.0,
+        color: '#10b981', // emerald-500
+        cue: 'Break parallel, drive hips up, keep chest proud.'
+      },
+      bench: {
+        id: 'bench',
+        name: 'Bench Press',
+        shortName: 'Bench',
+        sets: 5,
+        reps: 5,
+        increment: 2.5,
+        defaultWeight: 50.0,
+        color: '#3b82f6', // blue-500
+        cue: 'Retract shoulder blades, planted feet, touch lower chest.'
+      },
+      row: {
+        id: 'row',
+        name: 'Barbell Row',
+        shortName: 'Row',
+        sets: 5,
+        reps: 5,
+        increment: 2.5,
+        defaultWeight: 45.0,
+        color: '#f59e0b', // amber-500
+        cue: 'Torso near horizontal, pull explosively to lower ribs.'
+      },
+      ohp: {
+        id: 'ohp',
+        name: 'Overhead Press',
+        shortName: 'OHP',
+        sets: 5,
+        reps: 5,
+        increment: 2.5,
+        defaultWeight: 32.5,
+        color: '#a855f7', // purple-500
+        cue: 'Squeeze glutes & abs, press vertical, lock out overhead.'
+      },
+      deadlift: {
+        id: 'deadlift',
+        name: 'Deadlift',
+        shortName: 'Deadlift',
+        sets: 1,
+        reps: 5,
+        increment: 5.0,
+        defaultWeight: 80.0,
+        color: '#f43f5e', // rose-500
+        cue: '1x5 heavy top set. Bar over mid-foot, neutral spine, pull slack.'
+      }
+    };
+
+    const WORKOUT_PLANS = {
+      A: ['squat', 'bench', 'row'],
+      B: ['squat', 'ohp', 'deadlift']
+    };
+
+    /*************************************************************************
+     * 2. STATE MANAGEMENT & LOCALSTORAGE PERSISTENCE
+     *************************************************************************/
+    let appState = loadInitialState();
+    let activeTab = 'workout';
+    let selectedChartLift = 'ALL';
+    let expandedWarmupCards = {}; // Tracks which exercise cards have Warmup/Plates open
+
+    // Rest Timer runtime state
+    let timerInterval = null;
+    let timerRemainingSeconds = 0;
+    let timerTotalSeconds = 90;
+    let timerMuted = false;
+    let audioCtx = null;
+
+    function createDefaultState() {
+      const weights = {};
+      const failures = {};
+      Object.keys(EXERCISES).forEach(k => {
+        weights[k] = EXERCISES[k].defaultWeight;
+        failures[k] = 0;
+      });
+
+      return {
+        workingWeights: weights,
+        consecutiveFailures: failures,
+        lastCompletedWorkout: null, // 'A' or 'B'
+        currentWorkoutType: 'A',
+        activeSession: createBlankSession('A', weights),
+        history: []
+      };
+    }
+
+    function createBlankSession(type, workingWeights) {
+      const plan = WORKOUT_PLANS[type] || WORKOUT_PLANS.A;
+      const setsMap = {};
+      const sessionWeights = {};
+      plan.forEach(exId => {
+        const count = EXERCISES[exId].sets;
+        setsMap[exId] = Array(count).fill(null);
+        sessionWeights[exId] = workingWeights[exId];
+      });
+      return {
+        workoutType: type,
+        sets: setsMap,
+        weights: sessionWeights,
+        notes: '',
+        startedAt: new Date().toISOString()
+      };
+    }
+
+    function loadInitialState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return createDefaultState();
+        const parsed = JSON.parse(raw);
+        const def = createDefaultState();
+        const merged = {
+          ...def,
+          ...parsed,
+          workingWeights: { ...def.workingWeights, ...(parsed.workingWeights || {}) },
+          consecutiveFailures: { ...def.consecutiveFailures, ...(parsed.consecutiveFailures || {}) }
+        };
+        if (!merged.activeSession || !merged.activeSession.sets) {
+          merged.activeSession = createBlankSession(merged.currentWorkoutType || 'A', merged.workingWeights);
+        }
+        return merged;
+      } catch (err) {
+        console.error('Failed to read localStorage state, falling back to default:', err);
+        return createDefaultState();
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      } catch (err) {
+        console.error('Failed to save state:', err);
+      }
+    }
+
+    /*************************************************************************
+     * 3. HELPER CALCULATIONS (PLATES, WARM-UPS, DELOAD)
+     *************************************************************************/
+    function roundToNearestPlate(weight) {
+      return Math.max(BARBELL_WEIGHT, Math.round(weight / 2.5) * 2.5);
+    }
+
+    function calculatePlatesPerSide(totalWeight) {
+      if (totalWeight <= BARBELL_WEIGHT) return [];
+      let perSide = (totalWeight - BARBELL_WEIGHT) / 2;
+      const availablePlates = [
+        { weight: 25, color: 'bg-rose-600 text-white border-rose-400', height: 'h-11' },
+        { weight: 20, color: 'bg-blue-600 text-white border-blue-400', height: 'h-11' },
+        { weight: 15, color: 'bg-amber-400 text-slate-950 border-amber-300', height: 'h-10' },
+        { weight: 10, color: 'bg-emerald-600 text-white border-emerald-400', height: 'h-9' },
+        { weight: 5, color: 'bg-slate-200 text-slate-950 border-white', height: 'h-8' },
+        { weight: 2.5, color: 'bg-slate-700 text-white border-slate-500', height: 'h-7' },
+        { weight: 1.25, color: 'bg-slate-500 text-white border-slate-300', height: 'h-6' }
+      ];
+      const result = [];
+      for (const p of availablePlates) {
+        while (perSide + 0.001 >= p.weight) {
+          result.push(p);
+          perSide = +(perSide - p.weight).toFixed(2);
+        }
+      }
+      return result;
+    }
+
+    function generateWarmupSets(workingWeight, exId) {
+      if (workingWeight <= BARBELL_WEIGHT) {
+        return [
+          { label: 'Warm-up 1', setsReps: '2x5', weight: BARBELL_WEIGHT, pct: 'Empty Bar' }
+        ];
+      }
+      const warmups = [];
+      if (exId === 'deadlift' && workingWeight >= 65) {
+        warmups.push({ label: 'Warm-up 1', setsReps: '1x5', weight: roundToNearestPlate(workingWeight * 0.5), pct: '50%' });
+        warmups.push({ label: 'Warm-up 2', setsReps: '1x3', weight: roundToNearestPlate(workingWeight * 0.7), pct: '70%' });
+        warmups.push({ label: 'Warm-up 3', setsReps: '1x2', weight: roundToNearestPlate(workingWeight * 0.85), pct: '85%' });
+      } else {
+        warmups.push({ label: 'Warm-up 1', setsReps: '2x5', weight: BARBELL_WEIGHT, pct: 'Bar' });
+        if (workingWeight >= 35) {
+          warmups.push({ label: 'Warm-up 2', setsReps: '1x5', weight: roundToNearestPlate(workingWeight * 0.5), pct: '50%' });
+        }
+        if (workingWeight >= 50) {
+          warmups.push({ label: 'Warm-up 3', setsReps: '1x3', weight: roundToNearestPlate(workingWeight * 0.7), pct: '70%' });
+        }
+        if (workingWeight >= 65) {
+          warmups.push({ label: 'Warm-up 4', setsReps: '1x2', weight: roundToNearestPlate(workingWeight * 0.85), pct: '85%' });
+        }
+      }
+      return warmups;
+    }
+
+    function calculateDeloadWeight(weight) {
+      return roundToNearestPlate(weight * 0.9);
+    }
+
+    function getRecommendedNextWorkout() {
+      if (!appState.lastCompletedWorkout) return 'A';
+      return appState.lastCompletedWorkout === 'A' ? 'B' : 'A';
+    }
+
+    /*************************************************************************
+     * 4. UI RENDERING: WORKOUT TAB
+     *************************************************************************/
+    function renderAll() {
+      const totalSessions = appState.history.length;
+      const streakBadge = document.getElementById('headerStreakBadge');
+      streakBadge.textContent = `${totalSessions} ${totalSessions === 1 ? 'Session' : 'Sessions'}`;
+
+      renderWorkoutSelector();
+      renderExerciseCards();
+      renderHistoryAndAnalytics();
+    }
+
+    function renderWorkoutSelector() {
+      const upNext = getRecommendedNextWorkout();
+      const current = appState.currentWorkoutType;
+
+      const btnA = document.getElementById('selectWorkoutABtn');
+      const btnB = document.getElementById('selectWorkoutBBtn');
+      const badgeA = document.getElementById('badgeUpNextA');
+      const badgeB = document.getElementById('badgeUpNextB');
+      const subtext = document.getElementById('lastWorkoutSubtext');
+
+      if (upNext === 'A') {
+        badgeA.classList.remove('hidden');
+        badgeB.classList.add('hidden');
+      } else {
+        badgeB.classList.remove('hidden');
+        badgeA.classList.add('hidden');
+      }
+
+      if (current === 'A') {
+        btnA.className = 'relative text-left p-3.5 rounded-xl border-2 border-emerald-500 bg-emerald-500/10 text-white transition-all flex flex-col justify-between shadow-lg shadow-emerald-500/10';
+        btnB.className = 'relative text-left p-3.5 rounded-xl border-2 border-slate-800 bg-slate-950/60 text-slate-300 hover:border-slate-700 transition-all flex flex-col justify-between';
+      } else {
+        btnB.className = 'relative text-left p-3.5 rounded-xl border-2 border-emerald-500 bg-emerald-500/10 text-white transition-all flex flex-col justify-between shadow-lg shadow-emerald-500/10';
+        btnA.className = 'relative text-left p-3.5 rounded-xl border-2 border-slate-800 bg-slate-950/60 text-slate-300 hover:border-slate-700 transition-all flex flex-col justify-between';
+      }
+
+      if (appState.history.length > 0) {
+        const lastEntry = appState.history[0];
+        const dateStr = new Date(lastEntry.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+        subtext.innerHTML = `Last completed: <strong class="text-white">Workout ${lastEntry.workoutType}</strong> (${dateStr}) &bull; <span class="text-emerald-400 font-semibold">Workout ${upNext} is up next</span>`;
+      } else {
+        subtext.innerHTML = `No workouts logged yet &bull; <span class="text-emerald-400 font-semibold">Workout A is up next</span>`;
+      }
+
+      const notesInput = document.getElementById('sessionNotesInput');
+      if (notesInput && document.activeElement !== notesInput) {
+        notesInput.value = appState.activeSession.notes || '';
+      }
+    }
+
+    function renderExerciseCards() {
+      const container = document.getElementById('exerciseCardsContainer');
+      const plan = WORKOUT_PLANS[appState.currentWorkoutType];
+
+      container.innerHTML = plan.map(exId => {
+        const meta = EXERCISES[exId];
+        const weight = appState.activeSession.weights[exId] ?? appState.workingWeights[exId];
+        const setsArr = appState.activeSession.sets[exId] || Array(meta.sets).fill(null);
+        const failStreak = appState.consecutiveFailures[exId] || 0;
+        const isWarmupOpen = !!expandedWarmupCards[exId];
+        const plates = calculatePlatesPerSide(weight);
+        const warmups = generateWarmupSets(weight, exId);
+
+        const completedReps = setsArr.reduce((acc, r) => acc + (r !== null ? r : 0), 0);
+        const totalTargetReps = meta.sets * meta.reps;
+        const allFiveCompleted = setsArr.every(r => r === 5);
+
+        let statusBannerHTML = '';
+        if (failStreak >= 3) {
+          const deloadKg = calculateDeloadWeight(weight);
+          statusBannerHTML = `
+            <div class="mb-3 p-3 rounded-xl bg-rose-500/15 border border-rose-500/40 flex items-center justify-between gap-2">
+              <div class="text-xs text-rose-200">
+                <span class="font-bold text-rose-400 uppercase tracking-wide block">3 Consecutive Fails Detected</span>
+                5&times;5 rules recommend a <strong>10% deload to ${deloadKg} kg</strong> to rebuild momentum.
+              </div>
+              <button onclick="applyDeloadNow('${exId}')" class="shrink-0 px-3 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold text-xs transition shadow">
+                Deload to ${deloadKg}kg
+              </button>
+            </div>
+          `;
+        } else if (failStreak > 0) {
+          statusBannerHTML = `
+            <div class="mb-3 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs text-amber-300">
+              <span>Failed last attempt (${failStreak}/3 before 10% deload). Repeat <strong>${weight} kg</strong> today.</span>
+              <span class="font-mono font-bold">${failStreak}/3 Fails</span>
+            </div>
+          `;
+        }
+
+        const setCirclesHTML = setsArr.map((val, idx) => {
+          let circleStyle = 'bg-slate-950 border-2 border-slate-700 text-slate-400 hover:border-slate-500';
+          let displayLabel = `<span class="text-xs font-mono text-slate-500">S${idx + 1}</span>`;
+          let subCaption = 'Tap';
+
+          if (val === 5) {
+            circleStyle = 'bg-emerald-500 border-2 border-emerald-400 text-slate-950 font-extrabold shadow-lg shadow-emerald-500/25';
+            displayLabel = `<span class="text-xl font-mono">5</span>`;
+            subCaption = 'Done';
+          } else if (val !== null && val < 5) {
+            const failColor = val === 0
+              ? 'bg-rose-600 border-2 border-rose-400 text-white shadow-lg shadow-rose-600/25'
+              : 'bg-amber-500 border-2 border-amber-300 text-slate-950 shadow-lg shadow-amber-500/25';
+            circleStyle = `${failColor} font-extrabold`;
+            displayLabel = `<span class="text-xl font-mono">${val}</span>`;
+            subCaption = 'Failed';
+          }
+
+          return `
+            <div class="flex flex-col items-center gap-1">
+              <button
+                type="button"
+                onclick="cycleSetRep('${exId}', ${idx})"
+                aria-label="${meta.name} Set ${idx + 1}"
+                class="set-circle w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center ${circleStyle} focus:outline-none"
+              >
+                ${displayLabel}
+              </button>
+              <span class="text-[10px] font-mono uppercase tracking-wider ${val === 5 ? 'text-emerald-400 font-semibold' : val !== null ? 'text-amber-400 font-semibold' : 'text-slate-500'}">
+                ${subCaption}
+              </span>
+            </div>
+          `;
+        }).join('');
+
+        const platesBadgeHTML = plates.length > 0
+          ? plates.map(p => `<span class="px-1.5 py-0.5 text-[10px] font-mono font-bold rounded border ${p.color}">${p.weight}</span>`).join('')
+          : `<span class="text-xs text-slate-400 font-mono">Empty 20kg Olympic Bar</span>`;
+
+        return `
+          <div class="bg-slate-900/95 border ${allFiveCompleted ? 'border-emerald-500/60 shadow-emerald-500/5' : 'border-slate-800'} rounded-2xl p-4 shadow-xl transition-all">
+            ${statusBannerHTML}
+
+            <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${meta.color}"></span>
+                  <h3 class="font-extrabold text-base sm:text-lg text-white tracking-tight">${meta.name}</h3>
+                  <span class="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700">
+                    ${meta.sets}&times;${meta.reps}
+                  </span>
+                </div>
+                <p class="text-xs text-slate-400 mt-0.5">${meta.cue}</p>
+              </div>
+
+              <div class="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+                <button
+                  type="button"
+                  onclick="adjustExerciseWeight('${exId}', -2.5)"
+                  class="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 font-mono font-bold text-sm flex items-center justify-center transition"
+                  title="Decrease by 2.5 kg"
+                >
+                  -2.5
+                </button>
+                <button
+                  type="button"
+                  onclick="openCustomWeightModal('${exId}')"
+                  class="px-3 text-center group"
+                  title="Tap to enter custom weight"
+                >
+                  <span class="font-mono font-extrabold text-lg sm:text-xl text-white group-hover:text-emerald-400 transition">${weight.toFixed(1).replace(/\.0$/, '')}</span>
+                  <span class="text-xs font-mono text-slate-400 ml-0.5">kg</span>
+                </button>
+                <button
+                  type="button"
+                  onclick="adjustExerciseWeight('${exId}', 2.5)"
+                  class="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 font-mono font-bold text-sm flex items-center justify-center transition"
+                  title="Increase by 2.5 kg"
+                >
+                  +2.5
+                </button>
+              </div>
+            </div>
+
+            <div class="py-4 flex items-center ${meta.sets === 1 ? 'justify-center gap-4' : 'justify-between sm:justify-around'}">
+              ${setCirclesHTML}
+              ${meta.sets === 1 ? `
+                <div class="text-left max-w-[200px]">
+                  <span class="text-xs font-bold uppercase tracking-wider text-rose-400 block">1&times;5 Heavy Top Set</span>
+                  <span class="text-xs text-slate-400">Deadlifts tax the CNS heavily. Complete warm-ups, then pull 1 all-out set of 5 reps (+5kg next time!).</span>
+                </div>
+              ` : ''}
+            </div>
+
+            <div class="pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mr-1">Per Side:</span>
+                ${platesBadgeHTML}
+              </div>
+
+              <div class="flex items-center gap-3 ml-auto">
+                <span class="text-xs font-mono text-slate-400">
+                  Vol: <strong class="text-slate-200">${(completedReps * weight).toFixed(0)}kg</strong> (${completedReps}/${totalTargetReps})
+                </span>
+                <button
+                  type="button"
+                  onclick="toggleWarmupDrawer('${exId}')"
+                  class="text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition flex items-center gap-1 ${isWarmupOpen ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40' : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:text-white'}"
+                >
+                  <svg class="w-3.5 h-3.5 transition-transform ${isWarmupOpen ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                  Warm-up &amp; Plates
+                </button>
+              </div>
+            </div>
+
+            <div class="${isWarmupOpen ? 'block' : 'hidden'} mt-3 pt-3 border-t border-slate-800 bg-slate-950/80 rounded-xl p-3 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Warm-up Progression Ramp</span>
+                <span class="text-[11px] text-slate-400">Rest 45–60s between warm-up sets</span>
+              </div>
+
+              <div class="space-y-2">
+                ${warmups.map(w => {
+                  const wPlates = calculatePlatesPerSide(w.weight);
+                  const wPlatePills = wPlates.length
+                    ? wPlates.map(p => `<span class="px-1.5 py-0.5 text-[10px] font-mono font-bold rounded border ${p.color}">${p.weight}</span>`).join(' ')
+                    : '<span class="text-[11px] text-slate-500 font-mono">Empty Bar</span>';
+                  return `
+                    <div class="flex items-center justify-between bg-slate-900/90 px-3 py-2 rounded-lg border border-slate-800/80 text-xs">
+                      <div class="flex items-center gap-2">
+                        <span class="font-mono font-bold text-slate-300">${w.setsReps}</span>
+                        <span class="text-slate-400">@</span>
+                        <span class="font-mono font-extrabold text-white text-sm">${w.weight} kg</span>
+                        <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">${w.pct}</span>
+                      </div>
+                      <div class="flex items-center gap-1">
+                        <span class="text-[10px] text-slate-500 mr-1">Side:</span>
+                        ${wPlatePills}
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+
+                <div class="flex items-center justify-between bg-emerald-500/10 px-3 py-2 rounded-lg border border-emerald-500/30 text-xs">
+                  <div class="flex items-center gap-2">
+                    <span class="font-mono font-bold text-emerald-300">${meta.sets}&times;${meta.reps}</span>
+                    <span class="text-emerald-400">@</span>
+                    <span class="font-mono font-extrabold text-white text-sm">${weight} kg</span>
+                    <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">WORK SET</span>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <span class="text-[10px] text-emerald-300/70 mr-1">Side:</span>
+                    ${platesBadgeHTML}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        `;
+      }).join('');
+    }
+
+    /*************************************************************************
+     * 5. INTERACTIVE SET LOGGING & WEIGHT CONTROLS
+     *************************************************************************/
+    function selectWorkoutType(type) {
+      if (type !== 'A' && type !== 'B') return;
+      appState.currentWorkoutType = type;
+
+      if (appState.activeSession.workoutType !== type) {
+        const oldSession = appState.activeSession;
+        const nextSession = createBlankSession(type, appState.workingWeights);
+        if (oldSession && oldSession.sets && oldSession.sets.squat) {
+          nextSession.sets.squat = [...oldSession.sets.squat];
+          nextSession.weights.squat = oldSession.weights.squat;
+        }
+        nextSession.notes = oldSession.notes || '';
+        appState.activeSession = nextSession;
+      }
+
+      saveState();
+      renderAll();
+    }
+
+    function cycleSetRep(exId, setIndex) {
+      const setsArr = appState.activeSession.sets[exId];
+      if (!setsArr) return;
+
+      const currentVal = setsArr[setIndex];
+      let nextVal;
+
+      if (currentVal === null) {
+        nextVal = 5;
+      } else if (currentVal > 0) {
+        nextVal = currentVal - 1;
+      } else {
+        nextVal = null;
+      }
+
+      setsArr[setIndex] = nextVal;
+      saveState();
+      renderExerciseCards();
+
+      if (nextVal === 5) {
+        playTapFeedback(true);
+        startRestTimer(90, `${EXERCISES[exId].shortName} Set ${setIndex + 1} Done (5 Reps)`, 'emerald');
+      } else if (nextVal !== null && nextVal < 5) {
+        playTapFeedback(false);
+        startRestTimer(300, `${EXERCISES[exId].shortName} Set ${setIndex + 1}: ${nextVal} Reps (5m Rest)`, 'rose');
+      }
+    }
+
+    function adjustExerciseWeight(exId, delta) {
+      const current = appState.activeSession.weights[exId] ?? appState.workingWeights[exId];
+      const updated = Math.max(BARBELL_WEIGHT, +(current + delta).toFixed(2));
+      appState.activeSession.weights[exId] = updated;
+      appState.workingWeights[exId] = updated;
+      saveState();
+      renderAll();
+    }
+
+    function openCustomWeightModal(exId) {
+      const meta = EXERCISES[exId];
+      const current = appState.activeSession.weights[exId] ?? appState.workingWeights[exId];
+      showModal(`
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-extrabold text-white">Set ${meta.name} Weight</h3>
+            <button onclick="closeModal()" class="text-slate-400 hover:text-white">&times;</button>
+          </div>
+          <p class="text-xs text-slate-400">Enter working weight in kg (minimum 20kg Olympic bar). Standard micro-increments are 2.5kg.</p>
+          <div>
+            <input
+              id="customWeightInput"
+              type="number"
+              step="0.5"
+              min="20"
+              max="500"
+              value="${current}"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-xl font-mono font-extrabold text-white focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+          <div class="flex justify-end gap-2 pt-2">
+            <button onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Cancel</button>
+            <button onclick="confirmCustomWeight('${exId}')" class="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 text-xs font-extrabold">Save Weight</button>
+          </div>
+        </div>
+      `);
+      setTimeout(() => {
+        const input = document.getElementById('customWeightInput');
+        if (input) {
+          input.focus();
+          input.select();
+        }
+      }, 50);
+    }
+
+    function confirmCustomWeight(exId) {
+      const input = document.getElementById('customWeightInput');
+      if (!input) return;
+      const val = parseFloat(input.value);
+      if (!isNaN(val) && val >= BARBELL_WEIGHT) {
+        const rounded = +(Math.round(val * 2) / 2).toFixed(2);
+        appState.activeSession.weights[exId] = rounded;
+        appState.workingWeights[exId] = rounded;
+        saveState();
+        renderAll();
+        showToast(`${EXERCISES[exId].shortName} updated to ${rounded} kg`);
+      }
+      closeModal();
+    }
+
+    function applyDeloadNow(exId) {
+      const current = appState.activeSession.weights[exId] ?? appState.workingWeights[exId];
+      const deloaded = calculateDeloadWeight(current);
+      appState.activeSession.weights[exId] = deloaded;
+      appState.workingWeights[exId] = deloaded;
+      appState.consecutiveFailures[exId] = 0;
+      saveState();
+      renderAll();
+      showToast(`10% Deload applied: ${EXERCISES[exId].shortName} set to ${deloaded} kg`);
+    }
+
+    function toggleWarmupDrawer(exId) {
+      expandedWarmupCards[exId] = !expandedWarmupCards[exId];
+      renderExerciseCards();
+    }
+
+    function saveSessionNotes(val) {
+      appState.activeSession.notes = val;
+      saveState();
+    }
+
+    function resetCurrentSessionSets() {
+      const type = appState.currentWorkoutType;
+      appState.activeSession = createBlankSession(type, appState.workingWeights);
+      saveState();
+      renderAll();
+      dismissRestTimer();
+      showToast('Current workout sets cleared');
+    }
+
+    /*************************************************************************
+     * 6. BUILT-IN FLOATING REST TIMER & WEB AUDIO FEEDBACK
+     *************************************************************************/
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtx = new AudioContextClass();
+        }
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function playTapFeedback(isSuccess) {
+      if (timerMuted) return;
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(isSuccess ? 587.33 : 329.63, ctx.currentTime);
+        gain.gain.setValueAtTime(0.06, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.09);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.09);
+      } catch (e) {}
+    }
+
+    function playTimerFinishedChime() {
+      if (timerMuted) return;
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const notes = [523.25, 659.25, 783.99, 1046.5];
+        notes.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          const startTime = ctx.currentTime + idx * 0.12;
+          osc.frequency.setValueAtTime(freq, startTime);
+          gain.gain.setValueAtTime(0.15, startTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.25);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(startTime);
+          osc.stop(startTime + 0.25);
+        });
+      } catch (e) {}
+    }
+
+    function startRestTimer(seconds, reasonText, theme = 'emerald') {
+      if (timerInterval) clearInterval(timerInterval);
+      timerTotalSeconds = seconds;
+      timerRemainingSeconds = seconds;
+
+      const bar = document.getElementById('restTimerBar');
+      const badge = document.getElementById('restTimerStatusBadge');
+      const progress = document.getElementById('restTimerProgress');
+
+      bar.classList.remove('translate-y-full');
+
+      if (reasonText) {
+        badge.textContent = reasonText;
+      }
+
+      const p90 = document.getElementById('preset90Btn');
+      const p180 = document.getElementById('preset180Btn');
+      const p300 = document.getElementById('preset300Btn');
+      [p90, p180, p300].forEach(b => {
+        b.className = 'px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold border border-slate-700 bg-slate-800/90 text-slate-300 hover:text-white transition';
+      });
+
+      if (seconds === 90) {
+        p90.className = 'px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold border border-emerald-500/60 bg-emerald-500/20 text-emerald-300 transition';
+        progress.className = 'h-full bg-emerald-500 transition-all duration-300';
+        badge.className = 'text-[11px] font-bold uppercase tracking-wider text-emerald-400';
+      } else if (seconds === 180) {
+        p180.className = 'px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold border border-amber-500/60 bg-amber-500/20 text-amber-300 transition';
+        progress.className = 'h-full bg-amber-500 transition-all duration-300';
+        badge.className = 'text-[11px] font-bold uppercase tracking-wider text-amber-400';
+      } else if (seconds === 300) {
+        p300.className = 'px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold border border-rose-500/60 bg-rose-500/20 text-rose-300 transition';
+        progress.className = 'h-full bg-rose-500 transition-all duration-300';
+        badge.className = 'text-[11px] font-bold uppercase tracking-wider text-rose-400';
+      }
+
+      updateRestTimerUI();
+
+      timerInterval = setInterval(() => {
+        timerRemainingSeconds--;
+        if (timerRemainingSeconds <= 0) {
+          timerRemainingSeconds = 0;
+          clearInterval(timerInterval);
+          timerInterval = null;
+          playTimerFinishedChime();
+          badge.textContent = 'REST COMPLETE — CRUSH YOUR NEXT SET!';
+          badge.className = 'text-[11px] font-extrabold uppercase tracking-wider text-emerald-300 animate-pulse';
+        }
+        updateRestTimerUI();
+      }, 1000);
+    }
+
+    function updateRestTimerUI() {
+      const clock = document.getElementById('restTimerClock');
+      const progress = document.getElementById('restTimerProgress');
+      const mins = Math.floor(timerRemainingSeconds / 60);
+      const secs = timerRemainingSeconds % 60;
+      clock.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      const pct = timerTotalSeconds > 0 ? Math.max(0, Math.min(100, (timerRemainingSeconds / timerTotalSeconds) * 100)) : 0;
+      progress.style.width = `${pct}%`;
+    }
+
+    function addRestTime(extraSeconds) {
+      timerRemainingSeconds += extraSeconds;
+      timerTotalSeconds = Math.max(timerTotalSeconds, timerRemainingSeconds);
+      if (!timerInterval) {
+        startRestTimer(timerRemainingSeconds, 'Extended Rest Timer');
+      } else {
+        updateRestTimerUI();
+      }
+    }
+
+    function resetRestTimer() {
+      startRestTimer(timerTotalSeconds, 'Timer Reset');
+    }
+
+    function dismissRestTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+      const bar = document.getElementById('restTimerBar');
+      bar.classList.add('translate-y-full');
+    }
+
+    function toggleSoundMute() {
+      timerMuted = !timerMuted;
+      const btn = document.getElementById('soundMuteBtn');
+      if (timerMuted) {
+        btn.innerHTML = `<svg class="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg>`;
+        showToast('Rest timer audio muted');
+      } else {
+        btn.innerHTML = `<svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>`;
+        playTapFeedback(true);
+        showToast('Rest timer audio enabled');
+      }
+    }
+
+    /*************************************************************************
+     * 7. AUTO-PROGRESSION & DELOAD ENGINE (FINISH WORKOUT)
+     *************************************************************************/
+    function handleFinishWorkoutClick() {
+      const type = appState.currentWorkoutType;
+      const plan = WORKOUT_PLANS[type];
+
+      let hasUnmarkedSets = false;
+      plan.forEach(exId => {
+        const setsArr = appState.activeSession.sets[exId] || [];
+        if (setsArr.some(s => s === null)) {
+          hasUnmarkedSets = true;
+        }
+      });
+
+      if (hasUnmarkedSets) {
+        showModal(`
+          <div class="space-y-4">
+            <div class="flex items-center gap-2.5 text-amber-400">
+              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+              <h3 class="text-base font-extrabold text-white">Unlogged Sets Remaining</h3>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Some set circles in <strong>Workout ${type}</strong> haven't been tapped yet. Would you like to mark all remaining empty sets as <strong>5 reps completed</strong>, or log them as missed (0 reps)?
+            </p>
+            <div class="flex flex-col gap-2 pt-1">
+              <button onclick="completeAllEmptySetsAndFinish()" class="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs transition">
+                Mark All Remaining Sets as 5 Reps &amp; Finish
+              </button>
+              <button onclick="finalizeWorkoutSession()" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-semibold text-xs border border-slate-700 transition">
+                Save As-Is (Empty Sets Count as Missed)
+              </button>
+              <button onclick="closeModal()" class="w-full py-2 px-4 rounded-xl text-slate-400 hover:text-white text-xs font-semibold">
+                Cancel &amp; Return to Workout
+              </button>
+            </div>
+          </div>
+        `);
+        return;
+      }
+
+      finalizeWorkoutSession();
+    }
+
+    function completeAllEmptySetsAndFinish() {
+      const type = appState.currentWorkoutType;
+      const plan = WORKOUT_PLANS[type];
+      plan.forEach(exId => {
+        appState.activeSession.sets[exId] = appState.activeSession.sets[exId].map(s => (s === null ? 5 : s));
+      });
+      closeModal();
+      finalizeWorkoutSession();
+    }
+
+    function finalizeWorkoutSession() {
+      closeModal();
+      dismissRestTimer();
+
+      const type = appState.currentWorkoutType;
+      const plan = WORKOUT_PLANS[type];
+      const sessionSummary = [];
+      const exercisesLog = {};
+
+      plan.forEach(exId => {
+        const meta = EXERCISES[exId];
+        const currentWeight = appState.activeSession.weights[exId] ?? appState.workingWeights[exId];
+        const rawSets = appState.activeSession.sets[exId] || Array(meta.sets).fill(0);
+        const normalizedSets = rawSets.map(s => (s === null ? 0 : s));
+        const succeeded = normalizedSets.every(r => r === meta.reps);
+
+        exercisesLog[exId] = {
+          weight: currentWeight,
+          sets: normalizedSets,
+          succeeded
+        };
+
+        if (succeeded) {
+          const nextWeight = +(currentWeight + meta.increment).toFixed(2);
+          appState.workingWeights[exId] = nextWeight;
+          appState.consecutiveFailures[exId] = 0;
+          sessionSummary.push({
+            exId,
+            name: meta.name,
+            oldWeight: currentWeight,
+            newWeight: nextWeight,
+            status: 'progressed',
+            increment: meta.increment
+          });
+        } else {
+          const fails = (appState.consecutiveFailures[exId] || 0) + 1;
+          appState.workingWeights[exId] = currentWeight;
+          appState.consecutiveFailures[exId] = fails;
+          const deloadSuggested = fails >= 3;
+          sessionSummary.push({
+            exId,
+            name: meta.name,
+            oldWeight: currentWeight,
+            newWeight: currentWeight,
+            status: deloadSuggested ? 'deload' : 'repeat',
+            fails,
+            deloadWeight: calculateDeloadWeight(currentWeight)
+          });
+        }
+      });
+
+      const historyItem = {
+        id: 'wk_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        date: new Date().toISOString(),
+        workoutType: type,
+        notes: (appState.activeSession.notes || '').trim(),
+        exercises: exercisesLog
+      };
+
+      appState.history.unshift(historyItem);
+      appState.lastCompletedWorkout = type;
+
+      const nextType = type === 'A' ? 'B' : 'A';
+      appState.currentWorkoutType = nextType;
+      appState.activeSession = createBlankSession(nextType, appState.workingWeights);
+
+      saveState();
+      renderAll();
+
+      showPostWorkoutModal(type, nextType, sessionSummary);
+    }
+
+    function showPostWorkoutModal(completedType, nextType, summaryList) {
+      const itemsHTML = summaryList.map(item => {
+        if (item.status === 'progressed') {
+          return `
+            <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between">
+              <div>
+                <span class="font-bold text-sm text-white block">${item.name}</span>
+                <span class="text-xs text-emerald-400">All target reps hit! (+${item.increment} kg)</span>
+              </div>
+              <div class="font-mono font-extrabold text-sm text-emerald-300">
+                ${item.oldWeight} &rarr; ${item.newWeight} kg
+              </div>
+            </div>
+          `;
+        } else if (item.status === 'deload') {
+          return `
+            <div class="p-3 rounded-xl bg-rose-500/15 border border-rose-500/40 space-y-2">
+              <div class="flex items-center justify-between">
+                <div>
+                  <span class="font-bold text-sm text-white block">${item.name}</span>
+                  <span class="text-xs text-rose-300">3 consecutive stalls at ${item.oldWeight} kg</span>
+                </div>
+                <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-rose-500/30 text-rose-200">3/3 Fails</span>
+              </div>
+              <div class="flex items-center justify-between pt-1 border-t border-rose-500/20">
+                <span class="text-xs text-slate-300">Recommended 10% Deload: <strong>${item.deloadWeight} kg</strong></span>
+                <button onclick="applyDeloadFromSummary('${item.exId}', ${item.deloadWeight})" id="deloadSummaryBtn_${item.exId}" class="px-2.5 py-1 rounded-lg bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold text-xs transition">
+                  Apply ${item.deloadWeight}kg
+                </button>
+              </div>
+            </div>
+          `;
+        } else {
+          return `
+            <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between">
+              <div>
+                <span class="font-bold text-sm text-white block">${item.name}</span>
+                <span class="text-xs text-amber-300">Missed target reps (${item.fails}/3 fails)</span>
+              </div>
+              <div class="font-mono font-bold text-xs text-amber-200">
+                Repeat ${item.oldWeight} kg
+              </div>
+            </div>
+          `;
+        }
+      }).join('');
+
+      showModal(`
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center font-extrabold">
+                &#10003;
+              </div>
+              <div>
+                <h3 class="text-base font-extrabold text-white">Workout ${completedType} Logged!</h3>
+                <p class="text-xs text-slate-400">Up next session: <strong class="text-emerald-400">Workout ${nextType}</strong></p>
+              </div>
+            </div>
+            <button onclick="closeModal()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+          </div>
+
+          <div class="space-y-2.5">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Next Session Weight Progression</span>
+            ${itemsHTML}
+          </div>
+
+          <div class="flex gap-2 pt-2">
+            <button onclick="closeModal(); switchTab('history');" class="flex-1 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-slate-700 transition">
+              View Progress Chart
+            </button>
+            <button onclick="closeModal()" class="flex-1 py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs transition">
+              Done
+            </button>
+          </div>
+        </div>
+      `);
+    }
+
+    function applyDeloadFromSummary(exId, deloadWeight) {
+      appState.workingWeights[exId] = deloadWeight;
+      if (appState.activeSession && appState.activeSession.weights && appState.activeSession.weights[exId] !== undefined) {
+        appState.activeSession.weights[exId] = deloadWeight;
+      }
+      appState.consecutiveFailures[exId] = 0;
+      saveState();
+      renderAll();
+      const btn = document.getElementById(`deloadSummaryBtn_${exId}`);
+      if (btn) {
+        btn.textContent = `Deloaded to ${deloadWeight}kg`;
+        btn.disabled = true;
+        btn.className = 'px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 font-bold text-xs border border-emerald-500/40';
+      }
+    }
+
+    /*************************************************************************
+     * 8. HISTORY, ANALYTICS & SVG LINE CHART
+     *************************************************************************/
+    function renderHistoryAndAnalytics() {
+      renderWorkingWeightsOverview();
+      renderChartFilters();
+      renderStrengthChart();
+      renderHistoryList();
+    }
+
+    function renderWorkingWeightsOverview() {
+      const grid = document.getElementById('workingWeightsOverviewGrid');
+      if (!grid) return;
+
+      grid.innerHTML = Object.keys(EXERCISES).map(exId => {
+        const meta = EXERCISES[exId];
+        const w = appState.workingWeights[exId];
+        const fails = appState.consecutiveFailures[exId] || 0;
+        return `
+          <div class="bg-slate-950 border border-slate-800/90 rounded-xl p-3 flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full" style="background-color: ${meta.color}"></span>
+                ${meta.shortName}
+              </span>
+              <span class="text-[10px] font-mono text-slate-500">${meta.sets}&times;${meta.reps}</span>
+            </div>
+            <div class="font-mono font-extrabold text-lg text-white">${w} <span class="text-xs font-normal text-slate-400">kg</span></div>
+            <div class="mt-1 text-[10px] font-mono ${fails >= 3 ? 'text-rose-400 font-bold' : fails > 0 ? 'text-amber-400' : 'text-emerald-400'}">
+              ${fails >= 3 ? 'Deload Rec.' : fails > 0 ? `${fails}/3 Fails` : `+${meta.increment}kg pace`}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderChartFilters() {
+      const container = document.getElementById('chartFilterContainer');
+      if (!container) return;
+
+      const filters = [
+        { id: 'ALL', label: 'All Lifts', color: '#10b981' },
+        ...Object.keys(EXERCISES).map(k => ({
+          id: k,
+          label: EXERCISES[k].shortName,
+          color: EXERCISES[k].color
+        }))
+      ];
+
+      container.innerHTML = filters.map(f => {
+        const isActive = selectedChartLift === f.id;
+        return `
+          <button
+            onclick="setChartFilter('${f.id}')"
+            class="px-2.5 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 border ${
+              isActive
+                ? 'bg-slate-800 text-white border-emerald-500/60 shadow-sm'
+                : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+            }"
+          >
+            ${f.id !== 'ALL' ? `<span class="w-2 h-2 rounded-full" style="background-color:${f.color}"></span>` : ''}
+            ${f.label}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function setChartFilter(liftId) {
+      selectedChartLift = liftId;
+      renderChartFilters();
+      renderStrengthChart();
+    }
+
+    function renderStrengthChart() {
+      const container = document.getElementById('chartContainer');
+      if (!container) return;
+
+      const chronological = [...appState.history].reverse();
+
+      if (chronological.length === 0) {
+        container.innerHTML = `
+          <div class="text-center space-y-2 p-4">
+            <p class="text-xs text-slate-400">Complete your first workout or load demo history to visualize strength progression.</p>
+            <button onclick="loadDemoDataPrompt()" class="px-3 py-1.5 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 text-xs font-semibold transition">
+              Load Sample 5&times;5 Progression
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      const activeLiftKeys = selectedChartLift === 'ALL'
+        ? Object.keys(EXERCISES)
+        : [selectedChartLift];
+
+      const series = {};
+      let allWeights = [];
+
+      activeLiftKeys.forEach(exId => {
+        series[exId] = [];
+        chronological.forEach((session, idx) => {
+          if (session.exercises && session.exercises[exId]) {
+            const w = session.exercises[exId].weight;
+            const succeeded = session.exercises[exId].succeeded;
+            const dateLabel = new Date(session.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+            series[exId].push({ xIdx: idx, weight: w, succeeded, dateLabel });
+            allWeights.push(w);
+          }
+        });
+      });
+
+      if (allWeights.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400">No logged sessions for this exercise yet.</p>`;
+        return;
+      }
+
+      const minW = Math.max(0, Math.floor((Math.min(...allWeights) - 10) / 10) * 10);
+      const maxW = Math.ceil((Math.max(...allWeights) + 10) / 10) * 10;
+      const weightSpan = Math.max(10, maxW - minW);
+
+      const width = 580;
+      const height = 220;
+      const padLeft = 42;
+      const padRight = 20;
+      const padTop = 18;
+      const padBottom = 32;
+      const plotW = width - padLeft - padRight;
+      const plotH = height - padTop - padBottom;
+
+      const totalSessions = chronological.length;
+      const getX = (idx) => {
+        if (totalSessions <= 1) return padLeft + plotW / 2;
+        return padLeft + (idx / (totalSessions - 1)) * plotW;
+      };
+      const getY = (w) => {
+        return padTop + plotH - ((w - minW) / weightSpan) * plotH;
+      };
+
+      let gridHTML = '';
+      for (let i = 0; i <= 4; i++) {
+        const val = Math.round(minW + (weightSpan * i) / 4);
+        const y = getY(val);
+        gridHTML += `
+          <line x1="${padLeft}" y1="${y}" x2="${width - padRight}" y2="${y}" stroke="#1e293b" stroke-dasharray="3 3" stroke-width="1" />
+          <text x="${padLeft - 8}" y="${y + 4}" text-anchor="end" fill="#64748b" font-size="10" font-family="JetBrains Mono">${val}kg</text>
+        `;
+      }
+
+      let xLabelsHTML = '';
+      chronological.forEach((session, idx) => {
+        const step = Math.max(1, Math.ceil(totalSessions / 6));
+        if (idx % step === 0 || idx === totalSessions - 1) {
+          const x = getX(idx);
+          const dLabel = new Date(session.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+          xLabelsHTML += `
+            <text x="${x}" y="${height - 8}" text-anchor="middle" fill="#64748b" font-size="10" font-family="JetBrains Mono">${dLabel}</text>
+          `;
+        }
+      });
+
+      let pathsAndDotsHTML = '';
+      activeLiftKeys.forEach(exId => {
+        const pts = series[exId];
+        if (!pts || pts.length === 0) return;
+        const color = EXERCISES[exId].color;
+
+        if (pts.length > 1) {
+          const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${getX(p.xIdx).toFixed(1)} ${getY(p.weight).toFixed(1)}`).join(' ');
+          pathsAndDotsHTML += `
+            <path d="${d}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+          `;
+        }
+
+        pts.forEach(p => {
+          const cx = getX(p.xIdx).toFixed(1);
+          const cy = getY(p.weight).toFixed(1);
+          pathsAndDotsHTML += `
+            <g>
+              <circle cx="${cx}" cy="${cy}" r="4.5" fill="${p.succeeded ? color : '#090d16'}" stroke="${color}" stroke-width="2.5">
+                <title>${EXERCISES[exId].name} (${p.dateLabel}): ${p.weight}kg ${p.succeeded ? 'Hit' : '(Missed target)'}</title>
+              </circle>
+              ${selectedChartLift !== 'ALL' ? `
+                <text x="${cx}" y="${cy - 9}" text-anchor="middle" fill="#e2e8f0" font-size="10" font-family="JetBrains Mono" font-weight="bold">${p.weight}</text>
+              ` : ''}
+            </g>
+          `;
+        });
+      });
+
+      container.innerHTML = `
+        <svg viewBox="0 0 ${width} ${height}" class="w-full h-full overflow-visible">
+          ${gridHTML}
+          ${xLabelsHTML}
+          ${pathsAndDotsHTML}
+        </svg>
+      `;
+    }
+
+    function renderHistoryList() {
+      const listContainer = document.getElementById('historyListContainer');
+      const countLabel = document.getElementById('historyCountLabel');
+      if (!listContainer || !countLabel) return;
+
+      countLabel.textContent = `${appState.history.length} ${appState.history.length === 1 ? 'session' : 'sessions'}`;
+
+      if (appState.history.length === 0) {
+        listContainer.innerHTML = `
+          <div class="text-center py-8 border border-dashed border-slate-800 rounded-xl">
+            <p class="text-xs text-slate-400">No completed sessions yet. Finish your first workout on the Workout tab!</p>
+          </div>
+        `;
+        return;
+      }
+
+      listContainer.innerHTML = appState.history.map(item => {
+        const dateObj = new Date(item.date);
+        const dateFormatted = dateObj.toLocaleDateString(undefined, {
+          weekday: 'short',
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+        const timeFormatted = dateObj.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+
+        const exRowsHTML = Object.keys(item.exercises || {}).map(exId => {
+          const exData = item.exercises[exId];
+          const meta = EXERCISES[exId] || { name: exId, color: '#10b981' };
+          const pills = (exData.sets || []).map(r => {
+            const style = r === 5
+              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+              : 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+            return `<span class="w-6 h-6 rounded-full text-xs font-mono font-bold border flex items-center justify-center ${style}">${r}</span>`;
+          }).join('');
+
+          return `
+            <div class="flex items-center justify-between py-1.5 border-b border-slate-800/60 last:border-none">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full" style="background-color: ${meta.color}"></span>
+                <span class="text-xs font-bold text-slate-200">${meta.name}</span>
+                <span class="text-xs font-mono font-extrabold text-white bg-slate-800 px-2 py-0.5 rounded border border-slate-700">${exData.weight} kg</span>
+              </div>
+              <div class="flex items-center gap-1">
+                ${pills}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3.5 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-extrabold text-xs">
+                  WORKOUT ${item.workoutType}
+                </span>
+                <span class="text-xs text-slate-300 font-medium">${dateFormatted}</span>
+                <span class="text-[11px] font-mono text-slate-500">${timeFormatted}</span>
+              </div>
+              <button onclick="deleteHistoryEntry('${item.id}')" title="Delete log entry" class="text-slate-500 hover:text-rose-400 p-1 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
+            </div>
+            <div class="divide-y divide-slate-800/60">
+              ${exRowsHTML}
+            </div>
+            ${item.notes ? `<p class="text-xs text-slate-400 italic bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-800/80">"${escapeHtml(item.notes)}"</p>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function deleteHistoryEntry(id) {
+      appState.history = appState.history.filter(h => h.id !== id);
+      saveState();
+      renderAll();
+      showToast('Workout log entry deleted');
+    }
+
+    /*************************************************************************
+     * 9. CSV EXPORT, PWA REPO FILE DOWNLOADERS, JSON BACKUP & DEMO DATA
+     *************************************************************************/
+    function downloadTextFile(filename, content, mimeType = 'text/plain;charset=utf-8;') {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    function buildCSVString() {
+      const headers = ['Date', 'Workout', 'Exercise', 'Working_Weight_kg', 'Set_1', 'Set_2', 'Set_3', 'Set_4', 'Set_5', 'Target_Hit', 'Notes'];
+      const rows = [headers.join(',')];
+
+      const chronological = [...appState.history].reverse();
+      chronological.forEach(item => {
+        const dateISO = new Date(item.date).toISOString().split('T')[0];
+        const cleanNotes = `"${(item.notes || '').replace(/"/g, '""')}"`;
+
+        Object.keys(item.exercises || {}).forEach(exId => {
+          const ex = item.exercises[exId];
+          const s = ex.sets || [];
+          const row = [
+            dateISO,
+            item.workoutType,
+            `"${EXERCISES[exId] ? EXERCISES[exId].name : exId}"`,
+            ex.weight,
+            s[0] ?? '',
+            s[1] ?? '',
+            s[2] ?? '',
+            s[3] ?? '',
+            s[4] ?? '',
+            ex.succeeded ? 'YES' : 'NO',
+            cleanNotes
+          ];
+          rows.push(row.join(','));
+        });
+      });
+
+      return rows.join('\n');
+    }
+
+    function exportToCSV() {
+      if (appState.history.length === 0) {
+        showToast('No workout history to export yet');
+        return;
+      }
+      const csvContent = buildCSVString();
+      const filename = `iron_5x5_workouts_${new Date().toISOString().slice(0, 10)}.csv`;
+      downloadTextFile(filename, csvContent, 'text/csv;charset=utf-8;');
+      showToast('Exported workout history to CSV!');
+    }
+
+    function openPwaFilesModal() {
+      showModal(`
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-extrabold text-white">GitHub Pages &amp; Pixel PWA Files</h3>
+            <button onclick="closeModal()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            To deploy <strong>5x5-iron-simple-tracker</strong> on GitHub Pages and install it as a native WebAPK on your Pixel, upload <code class="text-emerald-300">index.html</code> along with <code class="text-emerald-300">manifest.json</code> and <code class="text-emerald-300">sw.js</code> to the root of your repository.
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <button onclick="downloadTextFile('manifest.json', MANIFEST_JSON_CONTENT, 'application/json'); showToast('Downloaded manifest.json');" class="py-2.5 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition flex items-center justify-center gap-1.5">
+              Download manifest.json
+            </button>
+            <button onclick="downloadTextFile('sw.js', SW_JS_CONTENT, 'application/javascript'); showToast('Downloaded sw.js');" class="py-2.5 px-3 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 border border-teal-500/30 text-xs font-bold transition flex items-center justify-center gap-1.5">
+              Download sw.js
+            </button>
+          </div>
+          <div class="flex justify-end pt-2">
+            <button onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Close</button>
+          </div>
+        </div>
+      `);
+    }
+
+    function openImportExportModal() {
+      const jsonBackup = JSON.stringify(appState, null, 2);
+      showModal(`
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-extrabold text-white">Backup &amp; Restore Data (JSON)</h3>
+            <button onclick="closeModal()" class="text-slate-400 hover:text-white">&times;</button>
+          </div>
+          <p class="text-xs text-slate-400">Copy your JSON backup below or paste a previously saved backup to restore your weights and workout history.</p>
+          <textarea
+            id="jsonBackupTextarea"
+            rows="7"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs font-mono text-slate-200 focus:outline-none focus:border-emerald-500"
+          >${escapeHtml(jsonBackup)}</textarea>
+          <div class="flex flex-wrap justify-between gap-2">
+            <button onclick="copyBackupJson()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 text-xs font-semibold border border-slate-700">
+              Copy Backup JSON
+            </button>
+            <div class="flex gap-2">
+              <button onclick="closeModal()" class="px-3.5 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Cancel</button>
+              <button onclick="restoreFromJsonTextarea()" class="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 text-xs font-extrabold">Import &amp; Restore</button>
+            </div>
+          </div>
+        </div>
+      `);
+    }
+
+    function copyBackupJson() {
+      const textarea = document.getElementById('jsonBackupTextarea');
+      if (!textarea) return;
+      textarea.select();
+      document.execCommand('copy');
+      showToast('Backup JSON copied to clipboard!');
+    }
+
+    function restoreFromJsonTextarea() {
+      const textarea = document.getElementById('jsonBackupTextarea');
+      if (!textarea) return;
+      try {
+        const parsed = JSON.parse(textarea.value);
+        if (!parsed.workingWeights || !Array.isArray(parsed.history)) {
+          showToast('Invalid JSON backup structure');
+          return;
+        }
+        appState = parsed;
+        if (!appState.activeSession) {
+          appState.activeSession = createBlankSession(appState.currentWorkoutType || 'A', appState.workingWeights);
+        }
+        saveState();
+        closeModal();
+        renderAll();
+        showToast('Training data restored successfully!');
+      } catch (e) {
+        showToast('Invalid JSON format — please check syntax');
+      }
+    }
+
+    function loadDemoDataPrompt() {
+      showModal(`
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-extrabold text-white">Load Sample 5&times;5 Progression?</h3>
+            <button onclick="closeModal()" class="text-slate-400 hover:text-white">&times;</button>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            This will populate <strong>8 realistic 5&times;5 sessions</strong> over the past 3 weeks (alternating Workout A &amp; B) so you can immediately explore the progression line charts, CSV export, and deload tracking.
+          </p>
+          <div class="flex justify-end gap-2 pt-2">
+            <button onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Cancel</button>
+            <button onclick="confirmLoadDemoData()" class="px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-slate-950 text-xs font-extrabold">Load 8 Demo Sessions</button>
+          </div>
+        </div>
+      `);
+    }
+
+    function confirmLoadDemoData() {
+      const now = Date.now();
+      const dayMs = 86400000;
+
+      const demoChronological = [
+        {
+          id: 'demo_1',
+          date: new Date(now - 18 * dayMs).toISOString(),
+          workoutType: 'A',
+          notes: 'Day 1 of 5x5! Bar speed felt crisp.',
+          exercises: {
+            squat: { weight: 60, sets: [5, 5, 5, 5, 5], succeeded: true },
+            bench: { weight: 50, sets: [5, 5, 5, 5, 5], succeeded: true },
+            row: { weight: 45, sets: [5, 5, 5, 5, 5], succeeded: true }
+          }
+        },
+        {
+          id: 'demo_2',
+          date: new Date(now - 16 * dayMs).toISOString(),
+          workoutType: 'B',
+          notes: 'Deadlift top set moved fast.',
+          exercises: {
+            squat: { weight: 62.5, sets: [5, 5, 5, 5, 5], succeeded: true },
+            ohp: { weight: 32.5, sets: [5, 5, 5, 5, 5], succeeded: true },
+            deadlift: { weight: 80, sets: [5], succeeded: true }
+          }
+        },
+        {
+          id: 'demo_3',
+          date: new Date(now - 13 * dayMs).toISOString(),
+          workoutType: 'A',
+          notes: 'Solid bench arch today.',
+          exercises: {
+            squat: { weight: 65, sets: [5, 5, 5, 5, 5], succeeded: true },
+            bench: { weight: 52.5, sets: [5, 5, 5, 5, 5], succeeded: true },
+            row: { weight: 47.5, sets: [5, 5, 5, 5, 5], succeeded: true }
+          }
+        },
+        {
+          id: 'demo_4',
+          date: new Date(now - 11 * dayMs).toISOString(),
+          workoutType: 'B',
+          notes: 'OHP last rep was a grinder.',
+          exercises: {
+            squat: { weight: 67.5, sets: [5, 5, 5, 5, 5], succeeded: true },
+            ohp: { weight: 35, sets: [5, 5, 5, 5, 4], succeeded: false },
+            deadlift: { weight: 85, sets: [5], succeeded: true }
+          }
+        },
+        {
+          id: 'demo_5',
+          date: new Date(now - 8 * dayMs).toISOString(),
+          workoutType: 'A',
+          notes: 'Hit 70kg Squat 5x5!',
+          exercises: {
+            squat: { weight: 70, sets: [5, 5, 5, 5, 5], succeeded: true },
+            bench: { weight: 55, sets: [5, 5, 5, 5, 5], succeeded: true },
+            row: { weight: 50, sets: [5, 5, 5, 5, 5], succeeded: true }
+          }
+        },
+        {
+          id: 'demo_6',
+          date: new Date(now - 6 * dayMs).toISOString(),
+          workoutType: 'B',
+          notes: 'Cleared 35kg OHP on second attempt.',
+          exercises: {
+            squat: { weight: 72.5, sets: [5, 5, 5, 5, 5], succeeded: true },
+            ohp: { weight: 35, sets: [5, 5, 5, 5, 5], succeeded: true },
+            deadlift: { weight: 90, sets: [5], succeeded: true }
+          }
+        },
+        {
+          id: 'demo_7',
+          date: new Date(now - 3 * dayMs).toISOString(),
+          workoutType: 'A',
+          notes: 'Heavy rows, kept strict form.',
+          exercises: {
+            squat: { weight: 75, sets: [5, 5, 5, 5, 5], succeeded: true },
+            bench: { weight: 57.5, sets: [5, 5, 5, 5, 5], succeeded: true },
+            row: { weight: 52.5, sets: [5, 5, 5, 5, 5], succeeded: true }
+          }
+        },
+        {
+          id: 'demo_8',
+          date: new Date(now - 1 * dayMs).toISOString(),
+          workoutType: 'B',
+          notes: '95kg Deadlift 1x5 PR!',
+          exercises: {
+            squat: { weight: 77.5, sets: [5, 5, 5, 5, 5], succeeded: true },
+            ohp: { weight: 37.5, sets: [5, 5, 5, 4, 4], succeeded: false },
+            deadlift: { weight: 95, sets: [5], succeeded: true }
+          }
+        }
+      ];
+
+      appState.workingWeights = {
+        squat: 80.0,
+        bench: 60.0,
+        row: 55.0,
+        ohp: 37.5,
+        deadlift: 100.0
+      };
+      appState.consecutiveFailures = {
+        squat: 0,
+        bench: 0,
+        row: 0,
+        ohp: 1,
+        deadlift: 0
+      };
+      appState.lastCompletedWorkout = 'B';
+      appState.currentWorkoutType = 'A';
+      appState.history = demoChronological.reverse();
+      appState.activeSession = createBlankSession('A', appState.workingWeights);
+
+      saveState();
+      closeModal();
+      renderAll();
+      showToast('8 demo 5x5 sessions loaded!');
+    }
+
+    function openResetConfirmModal() {
+      showModal(`
+        <div class="space-y-4">
+          <div class="flex items-center gap-2 text-rose-400">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            <h3 class="text-base font-extrabold text-white">Reset All Training Data?</h3>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            This will permanently clear your workout history and reset all working weights back to default starting weights. Consider exporting to CSV first.
+          </p>
+          <div class="flex justify-end gap-2 pt-2">
+            <button onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Cancel</button>
+            <button onclick="confirmFactoryReset()" class="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-400 text-slate-950 text-xs font-extrabold">Reset Everything</button>
+          </div>
+        </div>
+      `);
+    }
+
+    function confirmFactoryReset() {
+      localStorage.removeItem(STORAGE_KEY);
+      appState = createDefaultState();
+      saveState();
+      closeModal();
+      dismissRestTimer();
+      renderAll();
+      showToast('All data reset to factory defaults');
+    }
+
+    function openRulesModal() {
+      showModal(`
+        <div class="space-y-3.5">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-extrabold text-white">How the 5&times;5 Program Works</h3>
+            <button onclick="closeModal()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+          </div>
+          <div class="space-y-2.5 text-xs text-slate-300 leading-relaxed">
+            <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+              <strong class="text-emerald-400 block mb-0.5">1. Alternate Workout A &amp; B (3&times;/Week)</strong>
+              Train 3 days per week with at least one rest day between sessions (e.g., Mon A, Wed B, Fri A, then Mon B).
+            </div>
+            <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+              <strong class="text-emerald-400 block mb-0.5">2. Interactive Set Logging</strong>
+              Tap an empty circle once to log <strong>5 reps</strong>. If you fail a set, tap again to cycle down (4, 3, 2, 1, 0).
+            </div>
+            <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+              <strong class="text-emerald-400 block mb-0.5">3. Smart Rest Periods</strong>
+              &bull; <strong>90 seconds</strong> if 5 reps felt manageable<br/>
+              &bull; <strong>3 minutes</strong> if the set of 5 was tough<br/>
+              &bull; <strong>5 minutes</strong> if you missed a rep (&lt;5 reps)
+            </div>
+            <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+              <strong class="text-emerald-400 block mb-0.5">4. Auto-Progression &amp; 10% Deloads</strong>
+              Hit 5&times;5 to add <strong>+2.5kg</strong> next workout (<strong>+5kg</strong> for Deadlifts 1&times;5). Miss 3 consecutive sessions on a lift and the engine recommends a <strong>10% deload</strong>.
+            </div>
+          </div>
+          <button onclick="closeModal()" class="w-full py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-xs">Got It, Let's Lift</button>
+        </div>
+      `);
+    }
+
+    /*************************************************************************
+     * 10. NAVIGATION, MODALS & UTILITIES
+     *************************************************************************/
+    function switchTab(tab) {
+      activeTab = tab;
+      const workoutSec = document.getElementById('tabWorkout');
+      const historySec = document.getElementById('tabHistory');
+      const navW = document.getElementById('navWorkoutBtn');
+      const navH = document.getElementById('navHistoryBtn');
+
+      if (tab === 'workout') {
+        workoutSec.classList.remove('hidden');
+        historySec.classList.add('hidden');
+        navW.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-emerald-500 text-slate-950 shadow-sm';
+        navH.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white';
+      } else {
+        workoutSec.classList.add('hidden');
+        historySec.classList.remove('hidden');
+        navH.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-emerald-500 text-slate-950 shadow-sm';
+        navW.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white';
+        renderHistoryAndAnalytics();
+      }
+    }
+
+    function showModal(innerHtml) {
+      const overlay = document.getElementById('modalOverlay');
+      const content = document.getElementById('modalContent');
+      content.innerHTML = innerHtml;
+      overlay.classList.remove('hidden');
+      overlay.classList.add('flex');
+    }
+
+    function closeModal() {
+      const overlay = document.getElementById('modalOverlay');
+      overlay.classList.add('hidden');
+      overlay.classList.remove('flex');
+    }
+
+    let toastTimeout = null;
+    function showToast(msg) {
+      const banner = document.getElementById('toastBanner');
+      const text = document.getElementById('toastText');
+      if (!banner || !text) return;
+      text.textContent = msg;
+      banner.classList.remove('hidden');
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        banner.classList.add('hidden');
+      }, 2600);
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    document.getElementById('modalOverlay').addEventListener('click', (e) => {
+      if (e.target.id === 'modalOverlay') closeModal();
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderAll();
+    });
+  </script>
+</body>
+</html>
