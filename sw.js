@@ -1,8 +1,9 @@
-const CACHE_NAME = '5x5-iron-simple-tracker-v1';
+const CACHE_NAME = '5x5-iron-simple-tracker-v2';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
+  './kofi-qr.png',
   'https://cdn.tailwindcss.com',
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap'
 ];

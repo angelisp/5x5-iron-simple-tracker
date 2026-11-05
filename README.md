@@ -1,131 +1,155 @@
 # 5x5 Iron Simple Tracker (`5x5-iron-simple-tracker`)
 
-A fast, zero-dependency, offline-first **$5 \times 5$ Progressive Overload Barbell Strength Tracker** designed for mobile gym use and installable as a native full-screen **WebAPK** on Google Pixel / Android devices.
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/F5K229QP0X)
+
+A fast, offline-first **$5 \times 5$ Progressive Overload & Custom Strength Workout Tracker** with **Google Health Connect** integration and a **Dual-Path Release Architecture**:
+1. **Path 1 — Google Play Store Release (`.aab` / `.apk`):** Uses the native **Google Play In-App Billing Tip Jar** (`PlayBillingBridge.kt` powered by Google Pay) and automatically strips all Ko-fi links/QR codes during the Android build to remain 100% compliant with Google Play Payments policy.
+2. **Path 2 — Standalone Web / GitHub Pages PWA:** Keeps the **Ko-fi Support Button & Scannable QR Code** (`kofi-qr.png`) for web and direct Pixel WebAPK users.
 
 ---
 
-## Features
-
-- **Workout A / B Auto-Alternation:** Automatically tracks which training day is **UP NEXT** (`Workout A`: Squat, Bench Press, Barbell Row; `Workout B`: Squat, Overhead Press, Deadlift $1 \times 5$).
-- **One-Tap Gym Set Circles:** Tap any empty circle once to log `5` completed reps. Tap again to cycle down (`4`, `3`, `2`, `1`, `0`) if you miss a rep.
-- **Smart Floating Rest Timer:** Automatically launches a **1:30** rest timer after a completed set of 5 (with a quick **3:00 Hard** toggle) or a **5:00** recovery timer after a missed set, with Web Audio synthesized chimes.
-- **Barbell Plate & Warm-Up Calculator:** Calculates the exact plates needed per side on a standard $20\text{ kg}$ Olympic barbell alongside progressive warm-up ramps ($50\%$, $70\%$, $85\%$).
-- **Linear Progression & $10\%$ Deload Engine:** Automatically adds $+2.5\text{ kg}$ ($+5.0\text{ kg}$ on Deadlift) after every successful session and suggests a $10\%$ deload after 3 consecutive stalls on any lift.
-- **Full Data Portability:** Local-first `localStorage` persistence with active-session draft auto-save, interactive SVG strength progression charts, **CSV export**, and **JSON backup/restore**.
-
----
-
-## Repository File Structure
-
-Your `5x5-iron-simple-tracker` repository root should contain these 4 files:
+## Project Structure
 
 ```text
 5x5-iron-simple-tracker/
-├── index.html      # Main single-file application (with PWA meta + SW registration)
-├── manifest.json   # Web App Manifest for Android WebAPK installation
-├── sw.js           # Offline Service Worker caching shell & styles
-└── README.md       # Documentation & setup instructions
-```
-
-> **Tip:** You can either copy `manifest.json` and `sw.js` from the code blocks below, or click **History & Charts -> PWA Repo Files** inside the live `index.html` preview to download both files with one click.
-
----
-
-## Companion PWA Files for Your Repository
-
-### 1. `manifest.json`
-Create a file named `manifest.json` in the root of `5x5-iron-simple-tracker`:
-
-```json
-{
-  "name": "5x5 Iron Simple Tracker",
-  "short_name": "5x5 Iron",
-  "description": "Offline-first 5x5 progressive overload barbell strength workout tracker.",
-  "start_url": "./",
-  "scope": "./",
-  "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#090d16",
-  "theme_color": "#090d16",
-  "icons": [
-    {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23090d16'/%3E%3Cpath d='M112 176h48v160h-48zm240 0h48v160h-48zM64 208h32v96H64zm352 0h32v96h-32zM160 240h192v32H160z' fill='%2310b981'/%3E%3C/svg%3E",
-      "sizes": "192x192 512x512",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
-  ]
-}
-```
-
-### 2. `sw.js`
-Create a file named `sw.js` in the root of `5x5-iron-simple-tracker`:
-
-```javascript
-const CACHE_NAME = '5x5-iron-simple-tracker-v1';
-const ASSETS = [
-  './',
-  './index.html',
-  './manifest.json',
-  'https://cdn.tailwindcss.com',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap'
-];
-
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
-  );
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) return caches.delete(key);
-        })
-      )
-    )
-  );
-  self.clients.claim();
-});
-
-self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      return (
-        cachedResponse ||
-        fetch(event.request).then((networkResponse) => {
-          return caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, networkResponse.clone());
-            return networkResponse;
-          });
-        })
-      );
-    })
-  );
-});
+├── index.html                                 # Main app (auto-switches between PWA Ko-fi & Play Store Tip Jar)
+├── manifest.json                              # PWA Web App Manifest
+├── sw.js                                      # Offline Service Worker (caches app shell + kofi-qr.png for PWA)
+├── kofi-qr.png                                # Scannable Ko-fi QR code (used in PWA, excluded from Play Store build)
+├── package.json                               # Capacitor & Gradle build scripts
+├── capacitor.config.json                      # Capacitor Android configuration (com.iron5x5.tracker)
+├── scripts/
+│   └── copy-web.js                            # Prepares Play Store compliant www/ (injects PLAY_STORE flag & strips Ko-fi)
+├── android/                                   # Native Android project
+│   ├── build.gradle
+│   ├── settings.gradle
+│   ├── keystore.properties.example            # Template for local release signing
+│   └── app/
+│       ├── build.gradle                       # Health Connect SDK + Google Play Billing SDK + Release signing
+│       ├── proguard-rules.pro                 # Keeps JavascriptInterface bridges for R8 minification
+│       └── src/main/
+│           ├── AndroidManifest.xml            # Health Connect permissions + com.android.vending.BILLING
+│           └── java/com/iron5x5/tracker/
+│               ├── MainActivity.kt            # Attaches AndroidHealthConnect & AndroidBilling bridges
+│               ├── HealthConnectBridge.kt     # Writes ExerciseSessionRecord & ActiveCaloriesBurnedRecord
+│               └── PlayBillingBridge.kt       # Native Google Play Billing Tip Jar (tip_coffee, tip_shake, tip_preworkout)
+└── .github/workflows/
+    └── android-release.yml                    # Automated cloud build for Signed APK & Play Store AAB
 ```
 
 ---
 
-## Deploying to GitHub Pages & Installing on Google Pixel
+## Step-by-Step Guide 1: How to Update Your GitHub Project (and Keep the PWA Live)
 
-1. **Upload the Files:**
-   - Open your `5x5-iron-simple-tracker` repository on GitHub.
-   - Click **Add file -> Upload files** and drag in `index.html`, `manifest.json`, `sw.js`, and `README.md`.
-   - Click **Commit changes**.
+### Option A: Using Git in Terminal / VS Code (Recommended)
+Run these commands in your project folder (`c:\Users\p_ang\VIbeCoding\5x5\V1`):
 
-2. **Enable GitHub Pages:**
-   - Go to **Settings -> Pages** in your repository.
-   - Under **Build and deployment**, set **Source** to **Deploy from a branch**.
-   - Select the **`main`** branch and **`/ (root)`** folder, then click **Save**.
-   - After ~60 seconds, your app will be live at:
-     `https://<your-github-username>.github.io/5x5-iron-simple-tracker/`
+```bash
+git status
+git add .
+git commit -m "Add custom workouts, Health Connect, Play Store Tip Jar, and PWA Ko-fi support"
+git push origin main
+```
 
-3. **Install as a Standalone WebAPK on Your Pixel:**
-   - Open `https://<your-github-username>.github.io/5x5-iron-simple-tracker/` in **Chrome** on your Google Pixel.
-   - Tap the **Install App** button in the top header (or tap Chrome's three-dot menu and select **Add to Home screen -> Install**).
-   - Android will compile and install **5x5 Iron** directly into your Pixel app drawer with full offline support and zero browser chrome.
+### Option B: Uploading via the GitHub Web Interface
+1. Open your repository on GitHub (`5x5-iron-simple-tracker`).
+2. Click **Add file -> Upload files**.
+3. Drag and drop **all files and folders** from `c:\Users\p_ang\VIbeCoding\5x5\V1`, making sure to include:
+   - `index.html`, `manifest.json`, `sw.js`, `kofi-qr.png`, `README.md`
+   - `package.json`, `capacitor.config.json`, `.gitignore`
+   - `scripts/` folder
+   - `android/` folder
+   - `.github/` folder *(Note: On Windows Explorer, check **View -> Show -> Hidden items** so `.github` and `.gitignore` are visible)*
+4. Click **Commit changes** to `main`.
+
+### What Happens Automatically When You Push to GitHub:
+1. **Your PWA Updates (Path 2):** GitHub Pages serves the root `index.html`, `sw.js`, and `kofi-qr.png` directly. Users visiting your GitHub Pages URL (or using the installed Pixel WebAPK) get all the new custom workout features **with the Ko-fi button and QR code intact**.
+2. **Your Play Store Bundle Builds (Path 1):** GitHub Actions runs `.github/workflows/android-release.yml`, which executes `npm run sync:web` (`scripts/copy-web.js`). This creates a sanitized `www/` folder with `window.APP_DISTRIBUTION_CHANNEL = "PLAY_STORE"` and zero Ko-fi references, then compiles the signed `.apk` and `.aab` under the **Actions** tab.
+
+---
+
+## Step-by-Step Guide 2: How to Publish to the Google Play Store
+
+### Step 1: Generate Your Permanent Upload Keystore (One-Time Setup)
+Google Play requires your `.aab` bundle to be signed with your own upload key.
+1. If you have Java installed (or inside GitHub Codespaces / Cloud Shell), run:
+   ```bash
+   keytool -genkeypair -v -keystore release-keystore.jks -alias iron5x5 -keyalg RSA -keysize 2048 -validity 10000
+   ```
+2. Convert `release-keystore.jks` to a Base64 string:
+   - **PowerShell (Windows):**
+     ```powershell
+     [Convert]::ToBase64String([IO.File]::ReadAllBytes("release-keystore.jks")) | Set-Clipboard
+     ```
+3. In your GitHub repository, go to **Settings -> Secrets and variables -> Actions -> New repository secret** and add these 4 secrets:
+   - `ANDROID_KEYSTORE_BASE64`: *(paste the Base64 string from your clipboard)*
+   - `ANDROID_STORE_PASSWORD`: *(your keystore password)*
+   - `ANDROID_KEY_ALIAS`: `iron5x5`
+   - `ANDROID_KEY_PASSWORD`: *(your key password)*
+4. Trigger a run in the **Actions** tab (`Build Signed Android APK & Play Store AAB`) and download the **`5x5-iron-tracker-playstore-aab`** zip artifact, which contains `app-release.aab`.
+
+---
+
+### Step 2: Create the App in Google Play Console
+1. Go to the [Google Play Console](https://play.google.com/console) and sign in with your Google Play Developer account.
+2. Click **Create app**:
+   - **App name:** `5x5 Iron Simple Tracker`
+   - **Default language:** English
+   - **App or game:** App
+   - **Free or paid:** Free
+3. Accept the declarations and click **Create app**.
+
+---
+
+### Step 3: Configure the Google Play Tip Jar Products (In-App Products)
+Because `PlayBillingBridge.kt` queries 3 consumable tip IDs, create them in Play Console so users can tip via Google Pay:
+1. In the left sidebar of Google Play Console, go to **Monetize with Play -> Products -> In-app products**.
+2. *(Note: If Play Console asks you to upload a `.aab` with the `BILLING` permission first, upload `app-release.aab` to **Testing -> Internal testing** first, then return here.)*
+3. Click **Create product** for each of the 3 tip tiers:
+   - **Product 1:**
+     - **Product ID:** `tip_coffee`
+     - **Name:** `Gym Coffee Tip`
+     - **Description:** `Fuel a late-night coding session`
+     - **Price:** `$1.99` (or your local currency equivalent)
+   - **Product 2:**
+     - **Product ID:** `tip_shake`
+     - **Name:** `Post-Workout Shake`
+     - **Description:** `Support ongoing features & updates`
+     - **Price:** `$4.99`
+   - **Product 3:**
+     - **Product ID:** `tip_preworkout`
+     - **Name:** `Heavy PR / Pre-Workout Tub`
+     - **Description:** `Huge support for indie development`
+     - **Price:** `$9.99`
+4. Click **Save** and **Activate** on all 3 products. (`PlayBillingBridge.kt` automatically marks them as *consumed* after purchase so supporters can tip more than once.)
+
+---
+
+### Step 4: Complete the Health Connect & App Content Declarations
+In the left sidebar, go to **Policy and programs -> App content** and complete the required forms:
+1. **Privacy Policy:** Provide a URL to a simple page (you can host a `PRIVACY.md` or `privacy.html` on your GitHub Pages repo!) stating that `5x5 Iron Simple Tracker` stores workout logs locally on the user's device, writes workouts/calories to Android Health Connect only when authorized by the user, and does not sell or transmit personal health data to external servers.
+2. **Health apps declaration:**
+   - Select **Health & Fitness** / **Fitness and exercise tracking**.
+   - Declare the Health Connect permissions requested in `AndroidManifest.xml`:
+     - `READ_EXERCISE` / `WRITE_EXERCISE` (Used to record completed 5x5 strength sessions).
+     - `READ_ACTIVE_CALORIES_BURNED` / `WRITE_ACTIVE_CALORIES_BURNED` / `TOTAL_CALORIES_BURNED` (Used to record estimated calories burned during strength workouts).
+3. **Data safety:**
+   - Does your app collect or share any of the required user data types? Select **No** (since all data remains on-device / on-device Health Connect).
+4. **Ads:** Select **No, my app does not contain ads**.
+
+---
+
+### Step 5: Upload `app-release.aab` & Roll Out
+1. Go to **Test and release -> Testing -> Internal testing** (or **Closed testing** / **Production**).
+2. Click **Create new release**.
+3. Under **App bundles**, upload `app-release.aab` (extracted from `5x5-iron-tracker-playstore-aab`).
+4. Enter release notes (e.g., *"v1.1.0: Added custom workout routines, custom exercise library, Google Health Connect sync, and Google Play Tip Jar"*).
+5. Click **Next -> Save and publish**.
+
+---
+
+## Support & Donate (Web / PWA Version)
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/F5K229QP0X)
+
+<img src="./kofi-qr.png" alt="Ko-fi QR Code" width="220" />
