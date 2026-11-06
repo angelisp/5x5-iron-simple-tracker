@@ -2,7 +2,6 @@
   "appId": "com.iron5x5.tracker",
   "appName": "5x5 Iron Tracker",
   "webDir": "www",
-  "bundledWebRuntime": false,
   "server": {
     "androidScheme": "https"
   }
