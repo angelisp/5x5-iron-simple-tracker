@@ -27,85 +27,15 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
+      - name: Set up Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
       - name: Install Dependencies & Sync Web Assets
         run: |
           npm install
-          node -e '
-            const fs = require("fs");
-            const path = require("path");
-
-            // 1. Ensure required Android resource files exist (strings.xml & config.xml)
-            fs.mkdirSync("android/app/src/main/res/values", { recursive: true });
-            fs.writeFileSync("android/app/src/main/res/values/strings.xml", [
-              "<?xml version=\"1.0\" encoding=\"utf-8\"?>",
-              "<resources>",
-              "    <string name=\"app_name\">5x5 Iron Tracker</string>",
-              "    <string name=\"title_activity_main\">5x5 Iron Tracker</string>",
-              "    <string name=\"package_name\">com.iron5x5.tracker</string>",
-              "    <string name=\"custom_url_scheme\">com.iron5x5.tracker</string>",
-              "</resources>"
-            ].join("\n"));
-
-            fs.mkdirSync("android/app/src/main/res/xml", { recursive: true });
-            fs.writeFileSync("android/app/src/main/res/xml/config.xml", [
-              "<?xml version=\"1.0\" encoding=\"utf-8\"?>",
-              "<widget version=\"1.1.0\" xmlns=\"http://www.w3.org/ns/widgets\" xmlns:cdv=\"http://cordova.apache.org/ns/1.0\">",
-              "    <access origin=\"*\" />",
-              "</widget>"
-            ].join("\n"));
-
-            // 2. Ensure Gradle files use SDK 34 & compatible Health Connect 1.1.0-alpha07
-            if (fs.existsSync("android/build.gradle")) {
-              let rootGradle = fs.readFileSync("android/build.gradle", "utf8");
-              rootGradle = rootGradle.replace(/compileSdkVersion\s*=\s*35/g, "compileSdkVersion = 34")
-                                     .replace(/targetSdkVersion\s*=\s*35/g, "targetSdkVersion = 34");
-              fs.writeFileSync("android/build.gradle", rootGradle);
-            }
-            if (fs.existsSync("android/app/build.gradle")) {
-              let appGradle = fs.readFileSync("android/app/build.gradle", "utf8");
-              appGradle = appGradle.replace("1.1.0-alpha10", "1.1.0-alpha07")
-                                   .replace("minifyEnabled true", "minifyEnabled false")
-                                   .replace("shrinkResources true", "shrinkResources false");
-              fs.writeFileSync("android/app/build.gradle", appGradle);
-            }
-
-            // 3. Prepare Play Store compliant www/ and android/app/src/main/assets/public/
-            const wwwDir = "www";
-            const assetsDir = "android/app/src/main/assets";
-            const publicDir = path.join(assetsDir, "public");
-            fs.rmSync(wwwDir, { recursive: true, force: true });
-            fs.rmSync(assetsDir, { recursive: true, force: true });
-            fs.mkdirSync(wwwDir, { recursive: true });
-            fs.mkdirSync(publicDir, { recursive: true });
-
-            if (fs.existsSync("index.html")) {
-              let html = fs.readFileSync("index.html", "utf8");
-              html = html.replace("<head>", "<head>\n  <script>window.APP_DISTRIBUTION_CHANNEL = \"PLAY_STORE\";</script>");
-              html = html.replace(/https:\/\/ko-fi\.com\/F5K229QP0X/g, "");
-              html = html.replace(/https:\/\/ko-fi\.com\/img\/githubbutton_sm\.svg/g, "");
-              html = html.replace(/\.\/kofi-qr\.png/g, "");
-              fs.writeFileSync(path.join(wwwDir, "index.html"), html);
-              fs.writeFileSync(path.join(publicDir, "index.html"), html);
-            }
-            if (fs.existsSync("manifest.json")) {
-              fs.copyFileSync("manifest.json", path.join(wwwDir, "manifest.json"));
-              fs.copyFileSync("manifest.json", path.join(publicDir, "manifest.json"));
-            }
-            if (fs.existsSync("sw.js")) {
-              let sw = fs.readFileSync("sw.js", "utf8").replace(/\s*.\.\/kofi-qr\.png.,?/g, "");
-              fs.writeFileSync(path.join(wwwDir, "sw.js"), sw);
-              fs.writeFileSync(path.join(publicDir, "sw.js"), sw);
-            }
-
-            fs.writeFileSync(path.join(assetsDir, "capacitor.config.json"), JSON.stringify({
-              appId: "com.iron5x5.tracker",
-              appName: "5x5 Iron Tracker",
-              webDir: "www",
-              server: { androidScheme: "https" }
-            }, null, 2));
-            fs.writeFileSync(path.join(assetsDir, "capacitor.plugins.json"), "[]");
-            console.log("Prepared Play Store web assets and Capacitor Android config successfully.");
-          '
+          npm run sync:web
 
       - name: Prepare Release Keystore (from GitHub Secrets or Auto-Generated Fallback)
         working-directory: ./android
@@ -115,6 +45,7 @@ jobs:
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
+          mkdir -p app
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "Using repository secret ANDROID_KEYSTORE_BASE64 for Play Store release signing..."
             echo "$KEYSTORE_BASE64" | base64 --decode > app/release-keystore.jks
