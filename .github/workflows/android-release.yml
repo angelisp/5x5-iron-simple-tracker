@@ -1,0 +1,84 @@
+name: Build Signed Android APK & Play Store AAB
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Dependencies & Sync Web Assets
+        run: |
+          npm install
+          npm run sync:web
+          npx cap copy android
+
+      - name: Prepare Release Keystore (from GitHub Secrets or Auto-Generated Fallback)
+        working-directory: ./android
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "Using repository secret ANDROID_KEYSTORE_BASE64 for Play Store release signing..."
+            echo "$KEYSTORE_BASE64" | base64 --decode > app/release-keystore.jks
+            cat <<EOF > keystore.properties
+          storeFile=release-keystore.jks
+          storePassword=$STORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+          else
+            echo "No ANDROID_KEYSTORE_BASE64 secret found. Generating a self-signed release keystore so APK/AAB is still signed..."
+            keytool -genkeypair -v \
+              -keystore app/release-keystore.jks \
+              -alias iron5x5 \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass iron5x5pass \
+              -keypass iron5x5pass \
+              -dname "CN=5x5 Iron Tracker, OU=Fitness, O=Iron5x5, L=London, S=London, C=GB"
+            cat <<EOF > keystore.properties
+          storeFile=release-keystore.jks
+          storePassword=iron5x5pass
+          keyAlias=iron5x5
+          keyPassword=iron5x5pass
+          EOF
+          fi
+
+      - name: Build Signed Release APK & Play Store AAB with Gradle
+        working-directory: ./android
+        run: |
+          gradle assembleRelease bundleRelease --no-daemon
+
+      - name: Upload Signed Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: 5x5-iron-tracker-signed-apk
+          path: android/app/build/outputs/apk/release/*.apk
+
+      - name: Upload Signed Google Play Store AAB Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: 5x5-iron-tracker-playstore-aab
+          path: android/app/build/outputs/bundle/release/*.aab
